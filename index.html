@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作紀錄助手</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Playfair+Display:wght@700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            /* 經典學院風 - 羊皮紙/深藍/勃根地紅 (Classic Academy) */
+            --primary: #2c3e50;
+            /* 深藍 - 主要文字 */
+            --primary-highlight: #34495e;
+            /* 較淺深藍 - 互動 */
+
+            --accent: #800020;
+            /* 勃根地紅 - 強調 */
+            --accent-bright: #a93226;
+            /* 亮紅 - 懸停 */
+
+            --gold: #c5a059;
+            /* 古典金 - 裝飾 */
+            --gold-light: #f1c40f;
+            /* 亮金 - 標示 */
+
+            --bg: #fcfbf9;
+            /* 羊皮紙底色 */
+            --card-bg: #ffffff;
+            /* 白紙背景 */
+
+            --text: #2d3436;
+            /* 內文深灰 */
+            --text-muted: #636e72;
+            /* 次要灰 */
+
+            --border: #bdc3c7;
+            /* 淺灰邊框 */
+            --input-bg: #fdfdfd;
+            /* 輸入框亮底 */
+            --input-border: #bdc3c7;
+        }
+
+        body {
+            font-family: 'Noto Serif TC', '微軟正黑體', serif;
+            background-color: var(--bg);
+            /* 紙張紋理 - 淺色 */
+            background-image:
+                linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        .app-container {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 750px;
+            padding: 45px;
+            /* 經典配色邊框 */
+            border: 1px solid var(--border);
+            outline: 3px double var(--gold);
+            outline-offset: -12px;
+            box-shadow: 0 15px 40px rgba(44, 62, 80, 0.15);
+            position: relative;
+        }
+
+        /* 標題區 */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--gold);
+            position: relative;
+        }
+
+        .header h2 {
+            margin: 0;
+            color: var(--primary-highlight);
+            font-family: 'Playfair Display', serif;
+            font-size: 2.4rem;
+            letter-spacing: 1.5px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .header::after {
+            content: "Case Log Assistant";
+            display: block;
+            font-family: 'Playfair Display', serif;
+            color: var(--gold);
+            font-size: 0.85rem;
+            margin-top: 8px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            opacity: 0.8;
+        }
+
+        .badge {
+            background: var(--gold);
+            color: #2d3436;
+            padding: 2px 6px;
+            border-radius: 2px;
+            font-size: 0.7rem;
+            vertical-align: super;
+            font-family: sans-serif;
+            margin-left: 8px;
+            font-weight: bold;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            margin-bottom: 35px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .tab-btn {
+            padding: 12px 25px;
+            background: #ecf0f1;
+            border: 1px solid var(--border);
+            border-bottom: none;
+            margin-right: 5px;
+            font-family: 'Noto Serif TC', serif;
+            font-weight: bold;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 4px 4px 0 0;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover {
+            background: #dfe6e9;
+            color: var(--primary);
+        }
+
+        .tab-btn.active {
+            background: var(--gold);
+            color: #2d3436;
+            /* 深色文字對比金色背景 */
+            border-color: var(--gold);
+            position: relative;
+            top: 2px;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Sub-tabs */
+        .sub-tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 30px;
+            justify-content: center;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .sub-tab-btn {
+            background: none;
+            border: none;
+            font-family: 'Noto Serif TC', serif;
+            font-size: 1rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 5px 10px;
+            position: relative;
+            transition: color 0.3s;
+        }
+
+        .sub-tab-btn::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: 0;
+            width: 0;
+            height: 1px;
+            background: var(--accent-bright);
+            transition: all 0.3s;
+            transform: translateX(-50%);
+        }
+
+        .sub-tab-btn:hover {
+            color: var(--primary-highlight);
+        }
+
+        .sub-tab-btn.active {
+            color: var(--accent-bright);
+            /* 使用亮紅色 */
+            font-weight: bold;
+        }
+
+        .sub-tab-btn.active::after {
+            width: 100%;
+        }
+
+        /* 表單 */
+        .form-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            flex: 1;
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: var(--primary);
+            /* Deep Blue #2c3e50 */
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--primary);
+            /* Deep Blue #2c3e50 */
+            border-radius: 2px;
+            box-sizing: border-box;
+            font-size: 1rem;
+            font-family: 'Noto Serif TC', serif;
+            transition: all 0.3s;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 10px rgba(197, 160, 89, 0.2);
+            outline: none;
+            background-color: #ffffff;
+        }
+
+        /* 檔案上傳特殊處理 */
+        input[type="file"] {
+            border: 1px dashed var(--input-border);
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        input[type="file"]:hover {
+            border-color: var(--text-muted);
+        }
+
+        textarea {
+            height: 130px;
+            resize: vertical;
+        }
+
+        /* 按鈕 */
+        .btn-group {
+            display: flex;
+            gap: 20px;
+            margin-top: 40px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            font-family: 'Noto Serif TC', serif;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.3s;
+            border-radius: 2px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .btn-calendar {
+            background: linear-gradient(135deg, var(--gold) 0%, #d4a017 100%);
+            color: #2d3436;
+            box-shadow: 0 4px 15px rgba(225, 177, 44, 0.2);
+        }
+
+        .btn-calendar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(225, 177, 44, 0.3);
+        }
+
+        .btn-save {
+            background-color: transparent;
+            color: var(--primary-highlight);
+            border: 1px solid var(--text-muted);
+        }
+
+        .btn-save:hover {
+            border-color: var(--primary-highlight);
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        /* 歷史紀錄卡片 */
+        .history-item {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .history-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+            border-color: #57606f;
+        }
+
+        .item-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .role-tag {
+            background: var(--primary);
+            /* 深色標籤 */
+            color: #ffffff;
+            border: 1px solid var(--primary);
+            padding: 3px 10px;
+            border-radius: 2px;
+            font-size: 0.8rem;
+            margin-left: 12px;
+            margin-right: 8px;
+            font-family: sans-serif;
+            letter-spacing: 0.5px;
+        }
+
+        .notes-tag {
+            background-color: transparent;
+            border: 1px solid var(--text-muted);
+            color: var(--text-muted);
+            padding: 3px 10px;
+            border-radius: 2px;
+            font-size: 0.8rem;
+            margin-left: 5px;
+        }
+
+        .item-title {
+            font-family: 'Playfair Display', serif;
+            font-weight: bold;
+            font-size: 1.4em;
+            color: var(--primary-highlight);
+            margin-bottom: 12px;
+            border-bottom: 1px solid #4b4b4b;
+            padding-bottom: 10px;
+        }
+
+        .item-desc {
+            font-size: 1.05rem;
+            color: var(--text);
+            white-space: pre-wrap;
+            line-height: 1.7;
+            opacity: 0.9;
+        }
+
+        .del-btn {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            background: none;
+            border: 1px solid var(--accent);
+            /* Burgundy #800020 */
+            border-radius: 2px;
+            color: var(--accent);
+            font-size: 1.1rem;
+            width: 26px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 0;
+            transition: all 0.3s;
+            line-height: 1;
+        }
+
+        .del-btn:hover {
+            color: var(--accent-bright);
+            border-color: var(--accent-bright);
+            background-color: rgba(169, 50, 38, 0.05);
+        }
+
+        .empty-history {
+            text-align: center;
+            color: #636e72;
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            font-size: 1.2rem;
+            margin-top: 40px;
+        }
+
+        .file-link {
+            background: #fdfdfd;
+            border: 1px solid #bdc3c7;
+            color: var(--primary);
+            padding: 6px 12px;
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+
+        .file-link:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+
+        /* 隱私提示 */
+        .privacy-alert {
+            display: none;
+            background-color: rgba(232, 65, 24, 0.1);
+            /* 紅色透明背景 */
+            color: #ff7675;
+            padding: 15px;
+            border: 1px solid rgba(232, 65, 24, 0.3);
+            border-left: 4px solid var(--accent);
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+        }
+
+        .loading {
+            font-family: 'Playfair Display', serif;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-container">
+        <div class="header">
+            <h2>工作紀錄助手 <span class="badge" id="versionDisplay"></span></h2>
+        </div>
+
+        <script>
+            const ENV = {
+                APP_VERSION: "v3.4 Classic Academy",
+                USER_ROLES: ["導師", "個管", "心評", "其他"],
+                DEFAULT_LOCATION: "輔導室 / 資源教室",
+                SENSITIVE_ROLES: ["心評", "個管"],
+                API_BASE: "/api"
+            };
+            document.getElementById('versionDisplay').innerText = ENV.APP_VERSION;
+        </script>
+
+        <!-- Tabs Navigation -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('input')">新增紀錄 (New Entry)</button>
+            <button class="tab-btn" onclick="switchTab('history')">歷史檔案 (Archives)</button>
+        </div>
+
+        <!-- Tab 1: Input Form -->
+        <div id="tab-input" class="tab-content active">
+            <div id="privacyAlert" class="privacy-alert">
+                <i style="margin-right:5px">⚠️</i>
+                <strong>隱私提醒</strong>：您選擇的身分涉及個案隱私，請勿在公開日曆備註中輸入學生全名，建議使用代號（如：701 陳Ｏ明）。
+            </div>
+
+            <form id="logForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>身分 (Role)</label>
+                        <select id="role" name="role" onchange="handleRoleChange()"></select>
+                        <!-- 自訂身分輸入框 -->
+                        <input type="text" id="customRoleInput" placeholder="請輸入自訂身分名稱..."
+                            style="display:none; margin-top:10px; border-color:var(--accent);">
+                    </div>
+                    <div class="form-group">
+                        <label>日期 (Date)</label>
+                        <input type="date" id="date" name="date" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>事項標題 (Title)</label>
+                    <input type="text" id="title" name="title" placeholder="例如：一年級入班宣導、WISC-V 施測" required>
+                </div>
+
+                <div class="form-group">
+                    <label>詳細內容 (Description)</label>
+                    <textarea id="desc" name="desc" placeholder="請詳述工作內容..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>檔案附件 (Files)</label>
+                    <input type="file" id="files" name="files" multiple>
+                    <small style="display:block; margin-top:5px; color:#7f8c8d; font-style:italic;">*
+                        檔案將上傳至伺服器集中管理</small>
+                </div>
+
+                <div class="form-group">
+                    <label>外部連結 / 資料夾 (URL)</label>
+                    <input type="text" id="link" name="link" placeholder="https://drive.google.com/...">
+                </div>
+
+                <div class="form-group">
+                    <label>其他註記 (Notes)</label>
+                    <input type="text" id="notes" name="notes" placeholder="#行政 #IEP會議">
+                </div>
+
+                <div class="btn-group">
+                    <button type="button" class="btn-save" onclick="handleSaveOnly()">上傳存檔</button>
+                    <button type="button" class="btn-calendar" onclick="handleSyncCalendar()">上傳 + 加入日曆</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tab 2: History List -->
+        <div id="tab-history" class="tab-content">
+            <!-- 歷史紀錄篩選次分頁 -->
+            <div class="sub-tabs">
+                <button class="sub-tab-btn active" onclick="filterHistory('all', this)">全部</button>
+                <button class="sub-tab-btn" onclick="filterHistory('導師', this)">導師</button>
+                <button class="sub-tab-btn" onclick="filterHistory('個管', this)">個管</button>
+                <button class="sub-tab-btn" onclick="filterHistory('心評', this)">心評</button>
+                <button class="sub-tab-btn" onclick="filterHistory('其他', this)">其他</button>
+            </div>
+
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 10px;">
+                <span style="color: #95a5a6; font-size: 0.9em; font-style: italic;">Records stored in secure
+                    database.</span>
+                <button onclick="refreshHistory()"
+                    style="background:none; border:none; color:var(--primary); font-size:0.9em; text-decoration: underline; text-transform: none;">⟳
+                    Refresh List</button>
+            </div>
+            <div id="historyList">
+                <div class="loading">Loading Archives...</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 全域變數儲存所有紀錄，供前端篩選使用
+        let allLogs = [];
+
+        // 1. 初始化系統
+        window.onload = function () {
+            initRoles();
+            document.getElementById('date').valueAsDate = new Date();
+            loadHistory(); // 初始載入
+        };
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            const btnIndex = tabName === 'input' ? 0 : 1;
+            document.querySelectorAll('.tab-btn')[btnIndex].classList.add('active');
+
+            if (tabName === 'history') {
+                loadHistory();
+            }
+        }
+
+        function initRoles() {
+            const roleSelect = document.getElementById('role');
+            ENV.USER_ROLES.forEach(role => {
+                let option = document.createElement("option");
+                option.value = role;
+                option.text = role;
+                roleSelect.appendChild(option);
+            });
+        }
+
+        // 身分變更處理：隱私提示 + 自訂輸入框
+        function handleRoleChange() {
+            const currentRole = document.getElementById('role').value;
+            const alertBox = document.getElementById('privacyAlert');
+            const customInput = document.getElementById('customRoleInput');
+
+            // 隱私提示
+            alertBox.style.display = ENV.SENSITIVE_ROLES.includes(currentRole) ? 'block' : 'none';
+
+            // 自訂身分輸入
+            if (currentRole === '其他') {
+                customInput.style.display = 'block';
+                customInput.required = true;
+            } else {
+                customInput.style.display = 'none';
+                customInput.required = false;
+            }
+        }
+
+        function getFinalRole() {
+            const roleSelect = document.getElementById('role');
+            if (roleSelect.value === '其他') {
+                return document.getElementById('customRoleInput').value.trim() || '其他';
+            }
+            return roleSelect.value;
+        }
+
+        // 2. 核心邏輯整合
+
+        async function handleSaveOnly() {
+            if (!validateForm()) return;
+            const success = await uploadData();
+            if (success) {
+                alert("✅ 資料已歸檔！");
+            }
+        }
+
+        async function handleSyncCalendar() {
+            if (!validateForm()) return;
+
+            // 先上傳
+            const result = await uploadData(true);
+            if (!result) return;
+
+            // 準備日曆資料
+            const role = getFinalRole();
+            const title = document.getElementById('title').value;
+            const date = document.getElementById('date').value;
+            const desc = document.getElementById('desc').value;
+            const link = document.getElementById('link').value;
+            const notes = document.getElementById('notes').value;
+
+            const titlePrefix = `【${role}】`;
+            const fullTitle = titlePrefix + title;
+
+            let details = `${desc}\n\n`;
+            if (ENV.SENSITIVE_ROLES.includes(role)) {
+                details = `⚠️ [機密] 請遵守保密原則\n\n` + details;
+            }
+            if (link) details += `🔗 連結: ${link}\n`;
+            if (result.file_names) details += `📎 附件已上傳: ${result.file_names}\n`;
+            if (notes) details += `📝 註記: ${notes}`;
+
+            const dateStr = date.replace(/-/g, '');
+            const dates = `${dateStr}/${dateStr}`;
+
+            const baseUrl = "https://calendar.google.com/calendar/render?action=TEMPLATE";
+            const params = new URLSearchParams({
+                text: fullTitle,
+                dates: dates,
+                details: details,
+                location: ENV.DEFAULT_LOCATION
+            });
+
+            window.open(`${baseUrl}&${params.toString()}`, '_blank');
+            alert("✅ 已歸檔並開啟日曆視窗！");
+        }
+
+        function validateForm() {
+            const title = document.getElementById('title').value;
+            const date = document.getElementById('date').value;
+            const roleSelect = document.getElementById('role');
+            const customRole = document.getElementById('customRoleInput');
+
+            if (!title || !date) {
+                alert("⚠️ 請至少輸入「日期」與「事項標題」");
+                return false;
+            }
+
+            if (roleSelect.value === '其他' && !customRole.value.trim()) {
+                alert("⚠️ 請輸入自訂身分名稱");
+                customRole.focus();
+                return false;
+            }
+
+            return true;
+        }
+
+        async function uploadData(silent = false) {
+            const form = document.getElementById('logForm');
+            const formData = new FormData(form);
+
+            const finalRole = getFinalRole();
+            formData.set('role', finalRole);
+
+            const btn = document.querySelector('.btn-save');
+            const originalText = btn.innerText;
+            btn.innerText = "Processing...";
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${ENV.API_BASE}/logs`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Network response was not ok');
+                const result = await response.json();
+
+                document.getElementById('files').value = '';
+
+                btn.innerText = "Done";
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }, 2000);
+
+                return result;
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert("❌ 上傳失敗，請檢查伺服器連線。");
+                btn.innerText = originalText;
+                btn.disabled = false;
+                return null;
+            }
+        }
+
+        async function loadHistory() {
+            const list = document.getElementById('historyList');
+            try {
+                const response = await fetch(`${ENV.API_BASE}/logs`);
+                const data = await response.json();
+
+                allLogs = data;
+                renderHistoryList(allLogs);
+
+                document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector('.sub-tab-btn:first-child').classList.add('active');
+
+            } catch (error) {
+                list.innerHTML = '<div class="empty-history" style="color:var(--accent)">Connection Error: Server not reachable.</div>';
+            }
+        }
+
+        function filterHistory(filterType, btnElement) {
+            document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+            if (btnElement) btnElement.classList.add('active');
+
+            let filteredLogs = [];
+            const standardRoles = ["導師", "個管", "心評"];
+
+            if (filterType === 'all') {
+                filteredLogs = allLogs;
+            } else if (filterType === '其他') {
+                filteredLogs = allLogs.filter(item => !standardRoles.includes(item.role));
+            } else {
+                filteredLogs = allLogs.filter(item => item.role === filterType);
+            }
+
+            renderHistoryList(filteredLogs);
+        }
+
+        function renderHistoryList(logs) {
+            const list = document.getElementById('historyList');
+            if (logs.length === 0) {
+                list.innerHTML = '<div class="empty-history">No archives found.</div>';
+                return;
+            }
+
+            list.innerHTML = logs.map(item => {
+                let fileHtml = '';
+                if (item.file_names) {
+                    const files = item.file_names.split(',');
+                    // 顯示檔名時，去除前綴的時間戳 (假設格式為 timestamp_filename)
+                    fileHtml = files.map(f => {
+                        const displayName = f.includes('_') ? f.split('_').slice(1).join('_') : f;
+                        return `<a href="/uploads/${f}" target="_blank" class="file-link">📎 ${displayName}</a>`;
+                    }).join('');
+                }
+
+                return `
+            <div class="history-item">
+                <button class="del-btn" onclick="deleteItem(${item.id})" title="Delete entry">×</button>
+                <div class="item-header">
+                    <span>📅 ${item.date}</span>
+                    <span class="role-tag">${item.role}</span>
+                    ${item.notes ? `<span class="notes-tag">${item.notes}</span>` : ''}
+                </div>
+                <div class="item-title">${item.title}</div>
+                <div class="item-desc">${item.desc || '<span style="color:#ccc">No description.</span>'}</div>
+                ${fileHtml ? `<div style="margin-top:10px;">${fileHtml}</div>` : ''}
+                ${item.link ? `<div style="margin-top:5px;"><a href="${item.link}" target="_blank" class="file-link">🔗 External Link</a></div>` : ''}
+            </div>`;
+            }).join('');
+        }
+
+        function refreshHistory() {
+            loadHistory();
+        }
+
+        async function deleteItem(id) {
+            if (!confirm("Are you sure you want to delete this record? This cannot be undone.")) return;
+
+            try {
+                const response = await fetch(`${ENV.API_BASE}/logs/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    loadHistory();
+                } else {
+                    alert("Delete failed.");
+                }
+            } catch (error) {
+                alert("Network error.");
+            }
+        }
+    </script>
+
+</body>
+
+</html>
