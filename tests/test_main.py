@@ -28,10 +28,10 @@ def run_around_tests():
         os.remove(DB_PATH)
     init_db()
     
-    # 清空測試上傳目錄
-    if os.path.exists(UPLOAD_DIR):
-        for f in os.listdir(UPLOAD_DIR):
-            os.remove(os.path.join(UPLOAD_DIR, f))
+    # 確保測試上傳目錄存在並清空
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    for f in os.listdir(UPLOAD_DIR):
+        os.remove(os.path.join(UPLOAD_DIR, f))
             
     yield
     
