@@ -25,7 +25,8 @@ jobs:
 
     - name: Run tests
       run: |
-        uv run pytest --cov=. --cov-report=html
+        source .venv/bin/activate
+        pytest --cov=. --cov-report=html
 
     - name: Upload coverage report
       uses: actions/upload-artifact@v4
