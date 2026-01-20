@@ -26,6 +26,7 @@ jobs:
     - name: Run tests
       run: |
         source .venv/bin/activate
+        export PYTHONPATH=$PYTHONPATH:.
         pytest --cov=. --cov-report=html
 
     - name: Upload coverage report
