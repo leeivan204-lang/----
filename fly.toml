@@ -1,0 +1,26 @@
+# Fly.io Deployment Config
+
+app = "work-log-assistant-demo"  # User will need to change this
+primary_region = "hkg" # Hong Kong (Close to Taiwan/Asia)
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8000"
+  DB_PATH = "/data/logs.db"
+  UPLOAD_DIR = "/data/uploads"
+
+# 關鍵設定：掛載持久化硬碟 (Volume)
+# 這樣 SQLite 資料庫與上傳檔案才不會消失
+[mounts]
+  source = "work_log_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]

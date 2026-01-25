@@ -74,26 +74,49 @@ docker compose build --no-cache
 docker compose up -d
 ```
 
-## 雲端部署建議 (No VPS users)
+## 雲端部署建議 (Fly.io)
 
-如果您沒有 VPS，推薦使用 **[Render](https://render.com)** (免費方案可用)：
+既然您不使用 Render 且沒有 VPS，最強烈推薦使用 **[Fly.io](https://fly.io)**。
+Fly.io 支援 **Docker** 部署，且最重要的是它支援 **Persistent Volumes (持久化硬碟)**，這對於保存您的 SQLite 資料庫 (`logs.db`) 至關重要。
 
-1.  註冊 Render 帳號並連結 GitHub。
-2.  點擊 **New +** -> **Blueprint**。
-3.  選擇您的 Repository。
-4.  Render 會自動讀取 `render.yaml` 並開始部署。
+### 設定步驟
 
-### 設定自動部署 (GitHub Action Trigger)
+1.  **安裝 Fly CLI**:
+    - Windows (PowerShell): `iwr https://fly.io/install.ps1 -useb | iex`
+    - Mac/Linux: `curl -L https://fly.io/install.sh | sh`
 
-雖然 Render 會自動監聽 GitHub 變更，但若您希望由 GitHub Action 觸發 (例如在測試通過後)：
+2.  **註冊/登入**:
+    ```bash
+    fly auth signup
+    # 或
+    fly auth login
+    ```
 
-1.  在 Render Dashboard 找到您的服務 -> Settings -> **Deploy Hook**。
-2.  複製 Deploy Hook URL。
-3.  在 GitHub Repo -> Settings -> Secrets -> Actions -> New Secret：
-    - Name: `RENDER_DEPLOY_HOOK_URL`
-    - Value: (剛剛複製的網址)
-4.  現在，每次 Push 到 Main，GitHub Action 跑完測試後會通知 Render 更新。
+3.  **初始化 App**:
+    在專案目錄執行：
+    ```bash
+    fly launch --no-deploy
+    ```
+    - 跟隨提示操作。
+    - **重要**: 當它問您是否要修改設定時，確認 `fly.toml` 內容正確 (特別是 `[mounts]` 部分)。
+    - **建立 Volume** (存資料用):
+      ```bash
+      fly volumes create work_log_data --size 1
+      ```
+      (這會建立一個 1GB 的硬碟空間，掛載到 `/data`，確保資料不遺失)
 
-> **注意**：Render 免費版不支援 Persistent Disk。每次重新部署，網站上的 `logs.db` 會重置。但您的資料會保留在 **Google Sheet** 中 (因為您有設定同步)，所以不用擔心資料遺失。
+4.  **設定 GitHub Action 自動部署**:
+    - 取得 Deploy Token:
+      ```bash
+      fly tokens create deploy -x 999999h
+      ```
+    - 複製產生的 Token。
+    - 前往 GitHub Repo > Settings > Secrets > Actions > New Secret。
+    - Name: `FLY_API_TOKEN`
+    - Value: (剛剛複製的 Token)。
+
+5.  **推送到 GitHub**:
+    當您推送到 `main` 分支時，GitHub Action 會自動將程式碼打包並部署到 Fly.io。
+
 
 

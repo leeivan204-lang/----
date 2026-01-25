@@ -51,14 +51,17 @@ jobs:
     if: github.ref == 'refs/heads/main'
     
     steps:
-      - name: Trigger Render Deployment
-        # 使用 Render Deploy Hook 觸發部署
-        # 您需要在 Render 服務設定中找到 Deploy Hook URL 並設定為 GitHub Secret: RENDER_DEPLOY_HOOK_URL
-        if: secrets.RENDER_DEPLOY_HOOK_URL != ''
+      - name: Setup Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+        
+      - name: Deploy to Fly.io
+        # 需要設定 GitHub Secret: FLY_API_TOKEN
+        # 您需要在 Fly.io 註冊並執行 `fly tokens create deploy -x 999999h` 取得 Token
+        if: secrets.FLY_API_TOKEN != ''
         run: |
-          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+          flyctl deploy --remote-only
       
       - name: Notice
-        if: secrets.RENDER_DEPLOY_HOOK_URL == ''
+        if: secrets.FLY_API_TOKEN == ''
         run: |
-          echo "::warning title=Deployment Setup Needed::To enable automatic deployment, please set up a service on Render.com and add the RENDER_DEPLOY_HOOK_URL secret."
+          echo "::warning title=Deployment Setup Needed::Please sign up for Fly.io, creating an app, and set the FLY_API_TOKEN secret."
