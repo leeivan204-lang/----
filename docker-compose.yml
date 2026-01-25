@@ -1,0 +1,21 @@
+services:
+  app:
+    build: .
+    image: ghcr.io/leeivan204/----:latest
+    container_name: work_log_app
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-change_me_in_production_please}
+      - DB_PATH=/data/logs.db
+      - UPLOAD_DIR=/data/uploads
+    volumes:
+      # 將主機的 ./data 目錄掛載到容器的 /data
+      # 確保資料庫和上傳檔案在容器重啟後仍然存在
+      - ./data:/data
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/docs" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
