@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Auth Demo</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="utils/auth.js"></script>
+    <script>
+        // Guard: Check auth and role
+        if (!auth.checkAuth()) {
+            throw new Error('Redirecting to login');
+        }
+        const user = auth.getUser();
+        if (user.role !== 'admin') {
+            alert('Access Denied: Admin privileges required.');
+            window.location.href = '/dashboard.html';
+            throw new Error('Access Denied');
+        }
+    </script>
+    <link rel="icon" type="image/png" href="/favicon.png">
+</head>
+
+<body>
+    <div class="container dashboard-container">
+        <div class="card" style="border-top: 4px solid var(--danger-color);">
+            <nav class="nav-bar">
+                <div>
+                    <h1 class="card-title">Admin Panel <span class="admin-badge">ADMIN AREA</span></h1>
+                </div>
+                <div>
+                    <button onclick="window.location.href='/dashboard.html'" class="secondary"
+                        style="width: auto; padding: 0.5rem 1rem; font-size: 0.875rem; margin-right: 0.5rem;">Back to
+                        Dashboard</button>
+                    <button onclick="auth.logout()"
+                        style="width: auto; padding: 0.5rem 1rem; font-size: 0.875rem;">Logout</button>
+                </div>
+            </nav>
+
+            <div class="content">
+                <h2 style="font-size: 1.25rem; margin-bottom: 1rem;">Sensitive Data</h2>
+                <div id="adminData"
+                    style="background: #fff1f2; color: #991b1b; padding: 1.5rem; border-radius: 0.5rem; border: 1px dashed #fecaca;">
+                    Loading sensitive data...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function loadAdminData() {
+            try {
+                const response = await auth.fetchProtected('/admin/data'); // Assuming this endpoint handles role check too
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('adminData').innerHTML = `
+                        <h3 style="margin-bottom:0.5rem;">${data.message}</h3>
+                        <p style="font-family: monospace; font-size: 1.1em;">${data.data}</p>
+                    `;
+                } else {
+                    document.getElementById('adminData').textContent = 'Failed to load data. Status: ' + response.status;
+                }
+            } catch (error) {
+                console.error('Failed to load admin data', error);
+                document.getElementById('adminData').textContent = 'Error loading data: ' + error.message;
+            }
+        }
+
+        loadAdminData();
+    </script>
+</body>
+
+</html>

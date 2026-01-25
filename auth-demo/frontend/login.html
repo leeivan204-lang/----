@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Auth Demo</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/png" href="/favicon.png">
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">Welcome Back</h1>
+                <p class="card-subtitle">Please sign in to your account</p>
+            </div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required autocomplete="current-password">
+                </div>
+
+                <button type="submit">Sign In</button>
+
+                <div id="errorMessage" class="error-message"></div>
+            </form>
+
+            <div style="margin-top: 1.5rem; font-size: 0.875rem; color: var(--text-muted);">
+                <p>Test Creds:</p>
+                <ul style="list-style: none; margin-top: 0.5rem;">
+                    <li>User: johndoe / secret</li>
+                    <li>Admin: alice / secret</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="utils/auth.js"></script>
+    <script src="utils/debug-panel.js"></script>
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Redirect if already logged in
+        if (auth.getToken()) {
+            window.location.href = '/dashboard.html';
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMessage.style.display = 'none';
+            errorMessage.textContent = '';
+
+            const formData = new FormData(loginForm);
+
+            try {
+                const btn = loginForm.querySelector('button');
+                const originalText = btn.textContent;
+                btn.textContent = 'Signing in...';
+                btn.disabled = true;
+
+                await auth.login(
+                    formData.get('username'),
+                    formData.get('password')
+                );
+
+                window.location.href = '/dashboard.html';
+            } catch (error) {
+                errorMessage.textContent = error.message;
+                errorMessage.style.display = 'block';
+
+                const btn = loginForm.querySelector('button');
+                btn.textContent = 'Sign In';
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+
+</html>

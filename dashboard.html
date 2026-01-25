@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作紀錄手冊 - Dashboard</title>
+    <style>
+        :root {
+            --primary-color: #333;
+            --accent-color: #666;
+            --bg-color: #f9f9f9;
+            --card-bg: #ffffff;
+            --border-color: #e0e0e0;
+            --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background-color: #f4f4f4;
+            /* Light gray sidebar like the design */
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .logo {
+            font-size: 1.2rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-bottom: 3rem;
+            text-transform: uppercase;
+        }
+
+        .nav-item {
+            padding: 10px 0;
+            cursor: pointer;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .nav-icon {
+            margin-right: 12px;
+            width: 16px;
+            text-align: center;
+        }
+
+        .user-profile {
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #ccc;
+            margin-right: 10px;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 2rem 3rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        .page-title {
+            font-size: 1.8rem;
+            font-family: serif;
+            /* Serif for "Comparative View" look */
+            font-style: italic;
+        }
+
+        /* --- View Sections --- */
+        .view-section {
+            display: none;
+            height: 100%;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+
+        /* Date Nav */
+        .date-nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: nowrap;
+            /* Prevent wrapping */
+            gap: 20px;
+        }
+
+        .date-list {
+            display: flex;
+            gap: 8px;
+            /* Reduced from 20px */
+            overflow-x: auto;
+            align-items: center;
+        }
+
+        .date-item {
+            text-align: center;
+            cursor: pointer;
+            padding: 4px 8px;
+            /* Reduced padding */
+            border-radius: 4px;
+            min-width: 40px;
+            /* Reduced width */
+            flex-shrink: 0;
+        }
+
+        .date-item:hover {
+            background-color: #eee;
+        }
+
+        .date-item.active {
+            font-weight: bold;
+            position: relative;
+            background-color: #f0f0f0;
+            /* specific active bg */
+        }
+
+        .date-item.active::after {
+            content: '';
+            display: block;
+            width: 3px;
+            height: 3px;
+            background-color: black;
+            border-radius: 50%;
+            margin: 2px auto 0;
+        }
+
+        .calendar-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--primary-color);
+        }
+
+        /* Comparative Grid */
+        .comparative-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            height: 100%;
+        }
+
+        .col {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .column-header {
+            margin-bottom: 1.5rem;
+            border-left: 3px solid var(--primary-color);
+            padding-left: 10px;
+        }
+
+        .column-header h3 {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin: 0 0 5px 0;
+            color: var(--accent-color);
+        }
+
+        .column-header .date-display {
+            font-size: 1.2rem;
+            font-family: serif;
+        }
+
+        /* Log Card */
+        .log-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: box-shadow 0.2s;
+        }
+
+        .log-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .log-time {
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .log-title {
+            font-size: 1rem;
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+        }
+
+        .log-desc {
+            font-size: 0.9rem;
+            color: #555;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .empty-state {
+            font-style: italic;
+            color: #aaa;
+            padding: 2rem;
+            text-align: center;
+            border: 1px dashed #ddd;
+        }
+
+        .tag {
+            font-size: 0.7rem;
+            color: #999;
+            text-transform: uppercase;
+        }
+
+        /* Search Section */
+        .search-bar-container {
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            font-size: 1rem;
+        }
+
+        .search-results {
+            display: grid;
+            gap: 1rem;
+        }
+
+        #datePicker {
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .admin-alert {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+            display: none;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <div class="logo">LOGSYNC</div>
+
+        <div class="nav-item active" id="navJournal" onclick="switchView('journal')">
+            <span class="nav-icon">📖</span> 工作日誌 (Journal)
+        </div>
+        <div class="nav-item" id="navSearch" onclick="switchView('search')">
+            <span class="nav-icon">🔍</span> 搜尋 (Search)
+        </div>
+        <div class="nav-item" id="adminLink" style="display: none;" onclick="location.href='/admin.html'">
+            <span class="nav-icon">⚙️</span> 設定 (Admin)
+        </div>
+
+        <div class="user-profile">
+            <div class="avatar"></div>
+            <div>
+                <div style="font-weight: bold; font-size: 0.9rem;" id="userNameDisplay">--</div>
+                <div style="font-size: 0.75rem; color: #888;" id="roleDisplay">--</div>
+            </div>
+            <div style="margin-left: auto; cursor: pointer;" onclick="logout()">↪</div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="admin-alert" id="adminAlert">
+            您目前的權限不足以存取管理頁面。
+        </div>
+
+        <!-- JOURNAL VIEW -->
+        <div id="view-journal" class="view-section active">
+            <div class="header">
+                <div class="page-title">歷史回顧 (Comparative View)</div>
+            </div>
+
+            <div class="date-nav-container">
+                <div class="date-list" id="dateList">
+                    <!-- Javascript will populate this -->
+                </div>
+
+                <div class="calendar-actions">
+                    <button class="btn btn-outline" onclick="connectCalendar()" title="Add to Google Calendar">
+                        📅 連結行事曆
+                    </button>
+
+                    <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                        <span style="font-size: 0.7rem; color: #666; margin-bottom: 2px;">直接選擇日期</span>
+                        <input type="date" id="datePicker" onchange="onDateSelected(this.value)">
+                    </div>
+
+                    <button class="btn" onclick="goToNewLog()">+ 新增紀錄</button>
+                </div>
+            </div>
+
+            <div class="comparative-grid">
+                <!-- Present Year -->
+                <div class="col">
+                    <div class="column-header">
+                        <h3>今年 (Present Year)</h3>
+                        <div class="date-display" id="date0">--</div>
+                    </div>
+                    <div id="logs0">讀取中...</div>
+                </div>
+
+                <!-- Past Year -->
+                <div class="col">
+                    <div class="column-header" style="opacity: 0.7;">
+                        <h3>去年 (Past Year)</h3>
+                        <div class="date-display" id="date1">--</div>
+                    </div>
+                    <div id="logs1">讀取中...</div>
+                </div>
+
+                <!-- Historical (2 Years ago) -->
+                <div class="col">
+                    <div class="column-header" style="opacity: 0.5;">
+                        <h3>前年 (Historical)</h3>
+                        <div class="date-display" id="date2">--</div>
+                    </div>
+                    <div id="logs2">讀取中...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEARCH VIEW -->
+        <div id="view-search" class="view-section">
+            <div class="header">
+                <div class="page-title">搜尋紀錄 (Search Archives)</div>
+            </div>
+
+            <div class="search-bar-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="搜尋標題、內容關鍵字..."
+                    onkeyup="if(event.key === 'Enter') doSearch()">
+                <button class="btn" onclick="doSearch()">搜尋</button>
+            </div>
+
+            <div id="searchResults" class="search-results">
+                <div class="empty-state" style="border:none;">請輸入關鍵字進行搜尋...</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let currentUser = null;
+        let selectedDate = new Date();
+
+        async function init() {
+            const token = localStorage.getItem('token');
+
+            // Visitor Mode (Guest) Logic
+            if (!token) {
+                console.log("Guest Mode");
+                currentUser = { username: "訪客 (Guest)", role: "guest" };
+                document.getElementById('userNameDisplay').textContent = currentUser.username;
+                document.getElementById('roleDisplay').textContent = "VIEW ONLY"; // VISITOR
+
+                // Change Logout icon to Login
+                const logoutBtn = document.querySelector('.user-profile div[onclick="logout()"]');
+                if (logoutBtn) {
+                    logoutBtn.textContent = "➔"; // Login icon
+                    logoutBtn.onclick = () => window.location.href = '/login.html';
+                }
+
+                // Hide "New Log" button
+                const newLogBtn = document.querySelector('button[onclick="goToNewLog()"]');
+                if (newLogBtn) newLogBtn.style.display = 'none';
+
+                renderDateNav();
+                loadComparativeData(selectedDate);
+                return;
+            }
+
+            try {
+                // Fetch Me
+                const response = await fetch(`${API_BASE}/api/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.status === 401) {
+                    logout(); // Token invalid, force logout
+                    return;
+                }
+
+                currentUser = await response.json();
+                document.getElementById('userNameDisplay').textContent = currentUser.username;
+
+                // --- Workspace Validation ---
+                const wsRes = await fetch(`${API_BASE}/api/workspaces`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const workspaces = await wsRes.json();
+
+                if (workspaces.length === 0) {
+                    alert('尚無任何工作區，請先建立');
+                    window.location.href = '/workspaces.html';
+                    return;
+                }
+
+                let currentWsId = localStorage.getItem('currentWorkspaceId');
+                let foundWs = workspaces.find(w => w.id == currentWsId);
+
+                // If ID is invalid or not in list, pick the first one
+                if (!foundWs) {
+                    foundWs = workspaces[0];
+                    localStorage.setItem('currentWorkspaceId', foundWs.id);
+                    localStorage.setItem('currentWorkspaceRole', foundWs.role);
+                }
+
+                // Set Global Info
+                document.getElementById('roleDisplay').textContent = foundWs.role.toUpperCase();
+                // (Optional) Add Workspace Name to UI if we had a slot for it
+
+                if (currentUser.role === 'admin' || foundWs.role === 'manager') {
+                    // Show admin link if global admin OR workspace manager? 
+                    // Logic says: Admin page is for global stuff or WS members?
+                    // Currently /admin.html is mixed (User Mgmt). 
+                    // Let's stick to simple: If Global Admin.
+                    if (currentUser.role === 'admin') {
+                        document.getElementById('adminLink').style.display = 'flex';
+                    }
+                }
+
+                renderDateNav();
+                loadComparativeData(selectedDate);
+
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // --- View Switching ---
+        function switchView(viewName) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(`view-${viewName}`).classList.add('active');
+
+            if (viewName === 'journal') document.getElementById('navJournal').classList.add('active');
+            if (viewName === 'search') document.getElementById('navSearch').classList.add('active');
+        }
+
+        // --- Date Navigation Logic ---
+        function renderDateNav() {
+            const list = document.getElementById('dateList');
+            list.innerHTML = '';
+
+            // Show: [Selected-3, Selected-2, Selected-1, Selected, Selected+1, Selected+2, Selected+3]
+            const startOffset = -3;
+            const endOffset = 3;
+
+            for (let i = startOffset; i <= endOffset; i++) {
+                const d = new Date(selectedDate);
+                d.setDate(d.getDate() + i);
+
+                // Keep Day Name in English as requested
+                const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+                const dayNum = d.getDate();
+
+                const el = document.createElement('div');
+                el.className = `date-item ${i === 0 ? 'active' : ''}`;
+                el.innerHTML = `
+                    <div style="font-size: 0.7rem; color: #999; text-transform: uppercase;">${dayName}</div>
+                    <div style="font-size: 1.2rem;">${dayNum}</div>
+                `;
+                el.onclick = () => {
+                    selectedDate = d;
+                    renderDateNav();
+                    loadComparativeData(selectedDate);
+                    // Update picker
+                    document.getElementById('datePicker').valueAsDate = d;
+                };
+                list.appendChild(el);
+            }
+        }
+
+        function onDateSelected(dateStr) {
+            if (!dateStr) return;
+            const parts = dateStr.split('-');
+            selectedDate = new Date(parts[0], parts[1] - 1, parts[2]); // Local time construction
+            renderDateNav();
+            loadComparativeData(selectedDate);
+        }
+
+        function isSameDate(d1, d2) {
+            return d1.getFullYear() === d2.getFullYear() &&
+                d1.getMonth() === d2.getMonth() &&
+                d1.getDate() === d2.getDate();
+        }
+
+        // --- Comparative Data ---
+        async function loadComparativeData(date) {
+            const d0 = new Date(date);
+            const d1 = new Date(date); d1.setFullYear(d0.getFullYear() - 1);
+            const d2 = new Date(date); d2.setFullYear(d0.getFullYear() - 2);
+
+            // Keep Date Format in English as requested
+            document.getElementById('date0').textContent = formatDateTitle(d0);
+            document.getElementById('date1').textContent = formatDateTitle(d1);
+            document.getElementById('date2').textContent = formatDateTitle(d2);
+
+            fetchLogsForDate(d0, 'logs0');
+            fetchLogsForDate(d1, 'logs1');
+            fetchLogsForDate(d2, 'logs2');
+        }
+
+        async function fetchLogsForDate(dateObj, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '<div style="color: #ccc; text-align: center;">讀取中...</div>';
+
+            const isoDate = dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + String(dateObj.getDate()).padStart(2, '0');
+            const token = localStorage.getItem('token');
+
+            // Get Workspace ID
+            let wsId = localStorage.getItem('currentWorkspaceId');
+            if (!wsId) wsId = 1; // Default fallback
+
+            try {
+                const res = await fetch(`${API_BASE}/api/logs?date=${isoDate}&workspace_id=${wsId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.status === 422) {
+                    // Could be bad param
+                    console.error("422 Error: ", await res.text());
+                    container.innerHTML = '<div class="empty-state">格式錯誤</div>';
+                    return;
+                }
+
+                const logs = await res.json();
+                renderLogs(logs, container);
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = '<div class="empty-state">讀取失敗</div>';
+            }
+        }
+
+        function renderLogs(logs, container) {
+            container.innerHTML = '';
+            if (logs.length === 0) {
+                container.innerHTML = '<div class="empty-state">尚無紀錄 (No Logs)</div>';
+                return;
+            }
+
+            logs.forEach(log => {
+                const card = document.createElement('div');
+                card.className = 'log-card';
+
+                // --- Edit/Delete Logic ---
+                const currentYear = new Date().getFullYear().toString();
+                const isThisYear = log.date.startsWith(currentYear);
+                const isOwner = currentUser && (currentUser.username === log.user_id || currentUser.role === 'admin');
+
+                let actionsHtml = '';
+                if (isOwner && isThisYear) {
+                    actionsHtml = `
+                    <div style="margin-top: 15px; display: flex; gap: 10px; border-top: 1px solid #eee; padding-top: 10px;">
+                        <button onclick="editLog(${log.id});" style="cursor: pointer; padding: 6px 12px; border: 1px solid #ddd; background: #fff; border-radius: 4px; font-size: 0.8rem;">編輯 (Edit)</button>
+                        <button onclick="deleteLog(${log.id});" style="cursor: pointer; padding: 6px 12px; border: 1px solid #ffcccc; color: red; background: #fff; border-radius: 4px; font-size: 0.8rem;">刪除 (Delete)</button>
+                    </div>
+                    `;
+                }
+
+                // --- Content Rendering ---
+                // Files & Link Logic
+                let mediaHtml = '';
+
+                // 1. Link (Check if image or normal link)
+                if (log.link) {
+                    if (log.link.match(/\.(jpeg|jpg|gif|png)$/i)) {
+                        mediaHtml += `<div style="margin-top:10px;"><img src="${log.link}" style="max-width:100%; max-height:200px; border-radius:4px; border:1px solid #eee;" alt="Link Image"></div>`;
+                    } else {
+                        mediaHtml += `<div style="margin-top:5px;"><a href="${log.link}" target="_blank" style="color:blue; text-decoration:underline;">🔗 外部連結 (Link)</a></div>`;
+                    }
+                }
+
+                // 2. Local Files
+                if (log.file_names) {
+                    const files = log.file_names.split(',');
+                    files.forEach(f => {
+                        if (!f) return;
+                        // Check extension
+                        const ext = f.split('.').pop().toLowerCase();
+                        if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext)) {
+                            // Show Thumbnail
+                            mediaHtml += `<div style="margin-top:10px;"><img src="${API_BASE}/uploads/${f}" style="max-width:100%; max-height:200px; border-radius:4px; border:1px solid #eee;" alt="${f}"></div>`;
+                        } else {
+                            // Download Link
+                            mediaHtml += `<div style="margin-top:5px;"><a href="${API_BASE}/uploads/${f}" target="_blank" style="color:#333; text-decoration:none; display:flex; align-items:center;">📄 ${f} <span style="font-size:0.8rem; color:#999; margin-left:5px;">(點擊開啟)</span></a></div>`;
+                        }
+                    });
+                }
+
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                         <div style="display:flex; flex-direction:column; gap:5px;">
+                             <div class="log-time" style="font-size:0.85rem; color:#666;">
+                                <span class="tag" style="background:#eee; padding:2px 6px; border-radius:4px; color:#333;">${log.role || '一般'}</span>
+                                <span class="tag" style="background:#eef; padding:2px 6px; border-radius:4px; color:#005;">${log.category || '未分類'}</span>
+                             </div>
+                             <div class="log-title" style="font-size:1.2rem; font-weight:bold; margin-top:5px;">${log.title}</div>
+                         </div>
+                    </div>
+                    
+                    <div class="log-desc" style="margin-top:10px; color:#444; white-space: pre-wrap;">${log.desc || ''}</div>
+                    
+                    <div style="margin-top:10px; border-top:1px dashed #eee; padding-top:5px;">
+                        ${mediaHtml}
+                    </div>
+                    
+                    ${actionsHtml}
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // --- Action Functions ---
+        async function deleteLog(id) {
+            if (!confirm('確定刪除此紀錄? (此操作將同步刪除 Sheet 中的資料，且無法復原)')) return;
+
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`${API_BASE}/api/logs/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    // Reload
+                    loadComparativeData(selectedDate);
+                } else {
+                    alert('刪除失敗');
+                }
+            } catch (e) {
+                alert('錯誤');
+            }
+        }
+
+        function editLog(id) {
+            window.location.href = `/admin.html?edit_id=${id}#tab-entry`;
+        }
+
+        function formatDateTitle(d) {
+            return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        }
+
+        // --- Search Logic ---
+        async function doSearch() {
+            const kw = document.getElementById('searchInput').value.trim();
+            const container = document.getElementById('searchResults');
+
+            if (!kw) {
+                container.innerHTML = '<div class="empty-state" style="border:none;">請輸入關鍵字</div>';
+                return;
+            }
+
+            container.innerHTML = '<div style="text-align:center;">搜尋中...</div>';
+            const token = localStorage.getItem('token');
+
+            try {
+                let wsId = localStorage.getItem('currentWorkspaceId');
+                if (!wsId) wsId = 1;
+
+                const res = await fetch(`${API_BASE}/api/logs?keyword=${encodeURIComponent(kw)}&workspace_id=${wsId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const logs = await res.json();
+
+                if (logs.length === 0) {
+                    container.innerHTML = '<div class="empty-state" style="border:none;">查無結果</div>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                logs.forEach(log => {
+                    const el = document.createElement('div');
+                    el.className = 'log-card';
+                    el.style.borderLeft = "4px solid #333";
+
+                    const dateStr = log.date;
+
+                    el.innerHTML = `
+                        <div class="log-time">
+                            <span>📅 ${dateStr}</span>
+                             <span class="tag">#${log.category || '一般'}</span>
+                        </div>
+                        <div class="log-title">${log.title}</div>
+                        <div class="log-desc">${log.desc || ''}</div>
+                    `;
+                    container.appendChild(el);
+                });
+
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = '<div class="empty-state">搜尋失敗</div>';
+            }
+        }
+
+        // --- Actions ---
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+        }
+
+        function goToNewLog() {
+            if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'user')) {
+                window.location.href = '/admin.html';
+            } else {
+                alert('權限不足 (訪客無法新增)。');
+            }
+        }
+
+        function connectCalendar() {
+            const d = selectedDate;
+            const text = "工作紀錄提醒 (Work Log)";
+            const dates = d.toISOString().replace(/-|:|\.\d\d\d/g, "").slice(0, 15) + "Z/" + d.toISOString().replace(/-|:|\.\d\d\d/g, "").slice(0, 15) + "Z";
+            const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(text)}&dates=${dates}`;
+            window.open(url, '_blank');
+        }
+
+        window.onload = init;
+    </script>
+</body>
+
+</html>
