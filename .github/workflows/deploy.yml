@@ -48,54 +48,17 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' # 只在 main 分支部署
+    if: github.ref == 'refs/heads/main'
     
     steps:
-      - name: Deploy to VPS via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT || 22 }}
-          script: |
-            # 登入 GHCR (在伺服器上)
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
-            # 設定專案目錄
-            PROJECT_DIR="~/apps/work-log-assistant"
-            mkdir -p $PROJECT_DIR
-            cd $PROJECT_DIR
-            
-            # 下載最新 docker-compose.yml (如果沒有的話，或需要更新)
-            # 這裡我們假設 docker-compose.yml 已經在伺服器上，或者我們可以用 curl 下載 raw file
-            # 簡單做法：直接覆寫 docker-compose.yml 內容 (或是 repo 有被 clone 到 server)
-            # 推薦：如果 server 上有 git repo，則 git pull。如果沒有，則用 scp 或 echo 寫入。
-            # 為了簡單起見，我們假設 Server 上已經 clone 了 repo 資料夾
-            # 如果是全自動，我們可以用 scp action 複製 docker-compose.yml 過去
-            
-            # 方案 B: 假設使用者已經 clone 了 repo 在 ~/apps/work-log-assistant
-            # git pull origin main
-            
-            # 方案 C (更穩健): 直接拉取 Image 並重啟，假設 docker-compose.yml 內容不常變
-            # 但既然我們有 CD，最好連 compose 變更也同步。
-            
-            # 這裡採用: Git Pull (需要 server 有 git auth，稍嫌麻煩)
-            # 簡化方案: 讓使用者先手動 clone 一次。這裡執行 git pull。
-            
-            if [ ! -d ".git" ]; then
-              echo "Error: Project directory is not a git repository. Please clone the repo first."
-              exit 1
-            fi
-            
-            git pull origin main
-            
-            # 拉取最新 Image
-            image_name=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
-            docker pull $image_name:latest
-            
-            # 重啟服務
-            docker compose up -d
-            
-            # 清理舊 Image
-            docker image prune -a -f || true
+      - name: Trigger Render Deployment
+        # 使用 Render Deploy Hook 觸發部署
+        # 您需要在 Render 服務設定中找到 Deploy Hook URL 並設定為 GitHub Secret: RENDER_DEPLOY_HOOK_URL
+        if: secrets.RENDER_DEPLOY_HOOK_URL != ''
+        run: |
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+      
+      - name: Notice
+        if: secrets.RENDER_DEPLOY_HOOK_URL == ''
+        run: |
+          echo "::warning title=Deployment Setup Needed::To enable automatic deployment, please set up a service on Render.com and add the RENDER_DEPLOY_HOOK_URL secret."

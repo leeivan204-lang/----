@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: work-log-assistant
+    runtime: python
+    buildCommand: |
+      pip install uv
+      uv pip install -r requirements.txt
+    startCommand: "uv run uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DB_PATH
+        value: /opt/render/project/src/logs.db
+      - key: UPLOAD_DIR
+        value: /opt/render/project/src/uploads
+    # 這裡如果不使用 Disk，資料會是 Ephemeral 的
+    # 但為了符合 "Free Tier" 需求，我們暫不強制 Disk
+    # 若要持久化，需取消以下註解並升級付費
+    # disk:
+    #   name: data
+    #   mountPath: /data
+    #   sizeGB: 1

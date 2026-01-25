@@ -74,34 +74,26 @@ docker compose build --no-cache
 docker compose up -d
 ```
 
-## 自動化部署 (CI/CD)
+## 雲端部署建議 (No VPS users)
 
-本專案已設定 GitHub Actions workflow (`.github/workflows/deploy.yml`)。
+如果您沒有 VPS，推薦使用 **[Render](https://render.com)** (免費方案可用)：
 
-### 設定步驟
+1.  註冊 Render 帳號並連結 GitHub。
+2.  點擊 **New +** -> **Blueprint**。
+3.  選擇您的 Repository。
+4.  Render 會自動讀取 `render.yaml` 並開始部署。
 
-1.  **準備伺服器**: 確保伺服器已安裝 Docker, Docker Compose 與 Git。
-2.  **首次設定**:
-    在伺服器上建立目錄並 Clone 專案：
-    ```bash
-    mkdir -p ~/apps
-    cd ~/apps
-    git clone https://github.com/leeivan204/---- work-log-assistant
-    cd work-log-assistant
-    # 建立必要的資料夾
-    mkdir -p data/uploads
-    # 首次啟動 (確保環境變數設定正確)
-    docker compose up -d
-    ```
-3.  **設定 GitHub Secrets**:
-    在 GitHub Repo > Settings > Secrets and variables > Actions > New repository secret，新增以下變數：
-    
-    | Name | Value |
-    | :--- | :--- |
-    | `VPS_HOST` | 伺服器 IP (例如 `1.2.3.4`) |
-    | `VPS_USERNAME` | SSH 使用者 (例如 `root`) |
-    | `VPS_SSH_KEY` | SSH 私鑰內容 (建議使用專門的 Deploy Key) |
-    
-4.  **觸發部署**:
-    當您推送到 `main` 分支時，GitHub Actions 會自動建置 Image 並部署到伺服器。
+### 設定自動部署 (GitHub Action Trigger)
+
+雖然 Render 會自動監聽 GitHub 變更，但若您希望由 GitHub Action 觸發 (例如在測試通過後)：
+
+1.  在 Render Dashboard 找到您的服務 -> Settings -> **Deploy Hook**。
+2.  複製 Deploy Hook URL。
+3.  在 GitHub Repo -> Settings -> Secrets -> Actions -> New Secret：
+    - Name: `RENDER_DEPLOY_HOOK_URL`
+    - Value: (剛剛複製的網址)
+4.  現在，每次 Push 到 Main，GitHub Action 跑完測試後會通知 Render 更新。
+
+> **注意**：Render 免費版不支援 Persistent Disk。每次重新部署，網站上的 `logs.db` 會重置。但您的資料會保留在 **Google Sheet** 中 (因為您有設定同步)，所以不用擔心資料遺失。
+
 
