@@ -471,13 +471,20 @@
 
         <script>
             const ENV = {
-                APP_VERSION: "v3.4 Classic Academy",
+                APP_VERSION: "v3.5 Serverless",
                 USER_ROLES: ["導師", "個管", "心評", "其他"],
                 DEFAULT_LOCATION: "輔導室 / 資源教室",
                 SENSITIVE_ROLES: ["心評", "個管"],
-                API_BASE: "/api"
+                // IMPORTANT: 使用者必須在此填入部署後的 GAS Web App URL
+                GAS_API_URL: "https://script.google.com/macros/s/AKfycbzvC9mhK4Tc9cNRJwnxcwVrJ7rMCsSoRcgcl6GiWouOILC9KXfl7vD_ZBHOxb7zo6tQ/exec",
+                API_MODE: "gas" // 'gas' or 'python'
             };
             document.getElementById('versionDisplay').innerText = ENV.APP_VERSION;
+
+            // Check if GAS URL is set
+            if (ENV.API_MODE === 'gas' && ENV.GAS_API_URL.includes("PLEASE_REPLACE")) {
+                alert("⚠️ 設定未完成：請在 index.html 中填入您的 Google Apps Script URL");
+            }
         </script>
 
         <!-- Tabs Navigation -->
@@ -712,13 +719,63 @@
             btn.disabled = true;
 
             try {
-                const response = await fetch(`${ENV.API_BASE}/logs`, {
-                    method: 'POST',
-                    body: formData
-                });
+                let response;
+
+                if (ENV.API_MODE === 'gas') {
+                    // GAS Payload
+                    const payload = {
+                        action: "create_log",
+                        role: finalRole,
+                        date: document.getElementById('date').value,
+                        title: document.getElementById('title').value,
+                        desc: document.getElementById('desc').value,
+                        link: document.getElementById('link').value,
+                        notes: document.getElementById('notes').value,
+                        category: "", // Optional
+                        user_id: "CurrentUser", // TODO: Get from Auth
+                        file_content: "", // Handle File Base64
+                        file_name: ""
+                    };
+
+                    // Helper to read file as Base64
+                    const fileInput = document.getElementById('files');
+                    if (fileInput.files.length > 0) {
+                        const file = fileInput.files[0];
+                        const reader = new FileReader();
+
+                        // Wrap FileReader in Promise
+                        const fileData = await new Promise((resolve, reject) => {
+                            reader.onload = () => resolve({
+                                content: reader.result.split(',')[1],
+                                name: file.name,
+                                type: file.type
+                            });
+                            reader.onerror = reject;
+                            reader.readAsDataURL(file);
+                        });
+
+                        payload.file_content = fileData.content;
+                        payload.file_name = fileData.name;
+                        payload.mime_type = fileData.type;
+                    }
+
+                    response = await fetch(ENV.GAS_API_URL, {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+
+                } else {
+                    // Python Mode
+                    response = await fetch(`${ENV.API_BASE}/logs`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                }
 
                 if (!response.ok) throw new Error('Network response was not ok');
                 const result = await response.json();
+
+                if (result.status === "error") throw new Error(result.message);
 
                 document.getElementById('files').value = '';
 
@@ -732,7 +789,7 @@
 
             } catch (error) {
                 console.error('Error:', error);
-                alert("❌ 上傳失敗，請檢查伺服器連線。");
+                alert("❌ 上傳失敗: " + error.message);
                 btn.innerText = originalText;
                 btn.disabled = false;
                 return null;
@@ -742,8 +799,15 @@
         async function loadHistory() {
             const list = document.getElementById('historyList');
             try {
-                const response = await fetch(`${ENV.API_BASE}/logs`);
-                const data = await response.json();
+                let data;
+                if (ENV.API_MODE === 'gas') {
+                    const response = await fetch(`${ENV.GAS_API_URL}?action=get_logs`);
+                    data = await response.json();
+                    if (data.status === "error") throw new Error(data.message);
+                } else {
+                    const response = await fetch(`${ENV.API_BASE}/logs`);
+                    data = await response.json();
+                }
 
                 allLogs = data;
                 renderHistoryList(allLogs);
@@ -752,7 +816,7 @@
                 document.querySelector('.sub-tab-btn:first-child').classList.add('active');
 
             } catch (error) {
-                list.innerHTML = '<div class="empty-history" style="color:var(--accent)">Connection Error: Server not reachable.</div>';
+                list.innerHTML = `<div class="empty-history" style="color:var(--accent)">Connection Error: ${error.message}</div>`;
             }
         }
 
