@@ -36,8 +36,8 @@ app.add_middleware(
 
 # 設定路徑
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
-DB_PATH = os.path.join(BASE_DIR, "logs.db")
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", os.path.join(BASE_DIR, "uploads"))
+DB_PATH = os.getenv("DB_PATH", os.path.join(BASE_DIR, "logs.db"))
 
 # 確保上傳目錄存在
 os.makedirs(UPLOAD_DIR, exist_ok=True)
