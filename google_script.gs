@@ -1,138 +1,258 @@
-function doPost(e) {
+function doGet(e) {
   var lock = LockService.getScriptLock();
   lock.tryLock(10000);
   
   try {
+    var action = e.parameter.action;
     var doc = SpreadsheetApp.getActiveSpreadsheet();
-    var data = JSON.parse(e.postData.contents);
     
-    // 使用 user_id 作為分頁名稱，若無則預設 'Log'
-    var sheetName = data.user_id || 'Log';
-    var sheet = doc.getSheetByName(sheetName);
-    
-    // 如果分頁不存在則建立
-    if (!sheet) {
-      sheet = doc.insertSheet(sheetName);
-      // 建立標題列: 日期、星期、身份、事件類別、事件名稱、說明、上傳檔案或網址(縮圖)、SystemID
-      sheet.appendRow(['日期 (Date)', '星期 (Day)', '身份 (Role)', '事件類別 (Category)', '事件名稱 (Title)', '說明 (Description)', '檔案/網址 (File/Link)', 'SystemID']);
-      sheet.setFrozenRows(1);
-      sheet.hideColumns(8); // Hide SystemID
+    if (action === "login") {
+       return handleLogin(e);
+    } else if (action === "get_logs") {
+       return handleGetLogs(e);
     }
     
-    // 計算星期 (Day of Week)
-    var d = new Date(data.date);
-    var days = ['日', '一', '二', '三', '四', '五', '六'];
-    var dayStr = days[d.getDay()];
+    return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": "Unknown action"})).setMimeType(ContentService.MimeType.JSON);
     
-    // IMAGE/FILE HANDLER
-    // Expect: data.file_content (Base64), data.file_name, data.mime_type
-    var fileUrl = "";
-    if (data.file_content && data.file_name) {
-       try {
-         var folderName = "WorkLog_Uploads";
-         var folders = DriveApp.getFoldersByName(folderName);
-         var folder;
-         if (folders.hasNext()) {
-           folder = folders.next();
-         } else {
-           folder = DriveApp.createFolder(folderName);
-         }
-         
-         var decoded = Utilities.base64Decode(data.file_content);
-         var blob = Utilities.newBlob(decoded, data.mime_type || "application/octet-stream", data.file_name);
-         var file = folder.createFile(blob);
-         file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-         fileUrl = file.getUrl();
-         
-         // Override/Append to link field?
-         // If multiple files, we might need a list. For now, let's treat 'link' as the primary cloud link.
-         // Or append to 'file_names' column as a URL?
-         // Let's prepend the Drive Link to the content or just set it as 'link' if empty.
-         if(!data.link) {
-            data.link = fileUrl;
-         } else {
-            // If link exists, maybe append to desc?
-             data.desc = (data.desc || "") + "\n[File]: " + fileUrl;
-         }
-         
-       } catch (e) {
-         // return error or continue
-         data.desc = (data.desc || "") + "\n[Upload Error]: " + e.toString();
-       }
-    }
-
-    // 處理檔案/連結
-    var contentParts = [];
-    
-    // 1. Link (Now includes Drive Link)
-    if (data.link) {
-      if (data.link.match(/\.(jpeg|jpg|gif|png)$/i)) {
-          contentParts.push('=IMAGE("' + data.link + '")');
-      } else {
-          contentParts.push(data.link);
-      }
-    }
-    
-    // 2. Files
-    if (data.file_names) {
-      contentParts.push(data.file_names);
-    }
-    
-    var content = contentParts.join("\n");
-    
-    var rowData = [
-      "'" + data.date, 
-      dayStr,
-      data.role || "", 
-      data.category || "",
-      data.title,
-      data.desc,
-      content,
-      data.id // System ID (Column H)
-    ];
-
-    // ACTION HANDLER
-    if (data.action === "delete") {
-       var rows = sheet.getDataRange().getValues();
-       for (var i = 1; i < rows.length; i++) {
-         // Check Column H (Index 7) for ID
-         if (rows[i][7] == data.id) {
-           sheet.deleteRow(i + 1);
-           return ContentService.createTextOutput(JSON.stringify({"result":"deleted"})).setMimeType(ContentService.MimeType.JSON);
-         }
-       }
-       return ContentService.createTextOutput(JSON.stringify({"result":"not_found"})).setMimeType(ContentService.MimeType.JSON);
-       
-    } else if (data.action === "update") {
-       var rows = sheet.getDataRange().getValues();
-       for (var i = 1; i < rows.length; i++) {
-         if (rows[i][7] == data.id) {
-           sheet.getRange(i + 1, 1, 1, 8).setValues([rowData]);
-           return ContentService.createTextOutput(JSON.stringify({"result":"updated"})).setMimeType(ContentService.MimeType.JSON);
-         }
-       }
-       // If not found, append? Or error? Let's append to be safe.
-       sheet.appendRow(rowData);
-       
-    } else {
-       // Default: Create
-       sheet.appendRow(rowData);
-    }
-    
-    return ContentService.createTextOutput(JSON.stringify({"result":"success", "row": sheet.getLastRow()})).setMimeType(ContentService.MimeType.JSON);
-    
-  } catch (e) {
-    return ContentService.createTextOutput(JSON.stringify({"result":"error", "error": e})).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": err.toString()})).setMimeType(ContentService.MimeType.JSON);
   } finally {
     lock.releaseLock();
   }
 }
 
-function setup() {
-  var doc = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = doc.getSheetByName('Log');
-  if (!sheet) {
-    doc.insertSheet('Log');
-    doc.getRange('A1:K1').setValues([['ID', 'Date', 'Role', 'Title', 'Description', 'Link', 'Notes', 'Category', 'User', 'WorkspaceID', 'Created At']]);
+function doPost(e) {
+  var lock = LockService.getScriptLock();
+  lock.tryLock(10000);
+  
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var action = data.action;
+    
+    if (action === "create_log") {
+      return handleCreateLog(data);
+    } else if (action === "update_log") {
+      return handleUpdateLog(data);
+    } else if (action === "delete_log") {
+      return handleDeleteLog(data);
+    } else if (action === "create_user") {
+      return handleCreateUser(data);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": "Unknown action"})).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": err.toString()})).setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
   }
+}
+
+// --- Handlers ---
+
+function handleLogin(e) {
+  var username = e.parameter.username;
+  var password = e.parameter.password; // Plain text sent from client (Simple HTTPS security)
+  
+  var sheet = getSheet("Users");
+  var rows = sheet.getDataRange().getValues();
+  
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0] == username) {
+      // Check password (In real world, use hash. Here strictly matching or assume client sends hash)
+      // Let's assume client sends plain pwd and we compare with plain for GAS simplicity or hash matched.
+      // To strictly follow Python logic which used bcrypt, we can't easily do verify in GAS without libraries.
+      // Compromise: We will trust the Client if it sends a specific "login_check" or we store plain for this demo?
+      // BETTER: Apps Script is the backend. Let's store simple password or Client Hashed password.
+      // Assumption: Client sends simple password.
+      
+      if (rows[i][1] == password) { // Column B is Password
+         var role = rows[i][2]; // Column C is Role
+         var token = Utilities.base64Encode(username + ":" + new Date().getTime());
+         return jsonResp({
+           "status": "success", 
+           "access_token": token, 
+           "user": {"username": username, "role": role} 
+         });
+      } else {
+         return jsonResp({"status": "error", "message": "Invalid credentials"});
+      }
+    }
+  }
+  return jsonResp({"status": "error", "message": "User not found"});
+}
+
+function handleGetLogs(e) {
+  // Return all logs from all sheets or specific logic?
+  // Let's stick to "Log" sheet for simplicity as per original design
+  var sheet = getSheet("Log");
+  var rows = sheet.getDataRange().getValues();
+  var logs = [];
+  
+  // Headers: ID, Date, Role, Title, Desc, Link, Notes, Category, User, WorkspaceID, Files
+  // Index:   0   1     2     3      4     5     6      7         8     9            10
+  // Note: Data structure in Sheet might have changed. Let's Standardize.
+  // Standard Headers: [ID, Date, Role, Title, Desc, Link, Notes, Category, User, WorkspaceID, FileNames]
+  
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i];
+    // Skip empty id
+    if (!r[0]) continue;
+    
+    logs.push({
+      "id": r[0],
+      "date": formatDate(r[1]),
+      "role": r[2],
+      "title": r[3],
+      "desc": r[4],
+      "link": r[5],
+      "notes": r[6],
+      "category": r[7],
+      "user_id": r[8],
+      "workspace_id": r[9],
+      "file_names": r[10]
+    });
+  }
+  
+  return jsonResp(logs);
+}
+
+function handleCreateLog(data) {
+  var sheet = getSheet("Log");
+  var id = new Date().getTime(); // Simple ID
+  
+  var fileNames = "";
+  // Handle File Upload
+  if (data.file_content && data.file_name) {
+      fileNames = saveFileToDrive(data.file_content, data.file_name, data.mime_type);
+  }
+  
+  // Append Row
+  // Order: [ID, Date, Role, Title, Desc, Link, Notes, Category, User, WorkspaceID, FileNames]
+  sheet.appendRow([
+    id, 
+    data.date, 
+    data.role, 
+    data.title, 
+    data.desc, 
+    data.link, 
+    data.notes, 
+    data.category, 
+    data.user_id, 
+    1, // Default workspace
+    fileNames 
+  ]);
+  
+  return jsonResp({"status": "success", "id": id, "file_names": fileNames});
+}
+
+function handleUpdateLog(data) {
+  var sheet = getSheet("Log");
+  var rows = sheet.getDataRange().getValues();
+  var updated = false;
+  
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0] == data.id) {
+       // Found. Update columns.
+       var rowNum = i + 1;
+       
+       // Handle New File
+       var currentFiles = rows[i][10] || "";
+       if (data.file_content && data.file_name) {
+          var newFileLink = saveFileToDrive(data.file_content, data.file_name, data.mime_type);
+          if (currentFiles) currentFiles += ",";
+          currentFiles += newFileLink;
+       }
+       
+       // Update Range: Columns 2(B)-11(K) -> Date to FileNames
+       // Indices in row array: 1..10
+       // Sheet setup: A=ID, B=Date ...
+       
+       sheet.getRange(rowNum, 2).setValue(data.date);
+       sheet.getRange(rowNum, 3).setValue(data.role);
+       sheet.getRange(rowNum, 4).setValue(data.title);
+       sheet.getRange(rowNum, 5).setValue(data.desc);
+       sheet.getRange(rowNum, 6).setValue(data.link);
+       sheet.getRange(rowNum, 7).setValue(data.notes);
+       sheet.getRange(rowNum, 8).setValue(data.category);
+       // User ID (8) usually doesn't change
+       // Workspace (9)
+       sheet.getRange(rowNum, 11).setValue(currentFiles);
+       
+       updated = true;
+       break;
+    }
+  }
+  
+  if (!updated) return jsonResp({"status": "error", "message": "Log not found"});
+  return jsonResp({"status": "success"});
+}
+
+function handleDeleteLog(data) {
+  var sheet = getSheet("Log");
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0] == data.id) {
+      sheet.deleteRow(i + 1);
+      return jsonResp({"status": "success"});
+    }
+  }
+  return jsonResp({"status": "error", "message": "Log not found"});
+}
+
+function handleCreateUser(data) {
+  var sheet = getSheet("Users");
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0] == data.username) {
+       return jsonResp({"status": "error", "message": "User exists"});
+    }
+  }
+  
+  sheet.appendRow([data.username, data.password, data.role || "user", new Date()]);
+  return jsonResp({"status": "success"});
+}
+
+// --- Helpers ---
+
+function getSheet(name) {
+  var doc = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = doc.getSheetByName(name);
+  if (!sheet) {
+    sheet = doc.insertSheet(name);
+    if (name === "Log") {
+       sheet.appendRow(['ID', 'Date', 'Role', 'Title', 'Desc', 'Link', 'Notes', 'Category', 'User', 'WorkspaceID', 'FileNames']);
+    } else if (name === "Users") {
+       sheet.appendRow(['Username', 'Password', 'Role', 'Created At']);
+       // Default Admin
+       sheet.appendRow(['admin', 'admin', 'admin', new Date()]);
+    }
+  }
+  return sheet;
+}
+
+function saveFileToDrive(base64, name, mime) {
+  try {
+    var folderName = "WorkLog_Uploads";
+    var folders = DriveApp.getFoldersByName(folderName);
+    var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+    
+    var blob = Utilities.newBlob(Utilities.base64Decode(base64), mime, name);
+    var file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return file.getUrl();
+  } catch(e) {
+    return "[Upload Error]";
+  }
+}
+
+function jsonResp(data) {
+  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function formatDate(date) {
+  if (!date) return "";
+  var d = new Date(date);
+  if (isNaN(d.getTime())) return date; // Already string?
+  return Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM-dd");
 }
