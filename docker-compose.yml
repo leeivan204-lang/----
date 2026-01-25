@@ -1,6 +1,7 @@
 services:
   app:
     build: .
+    image: ghcr.io/leeivan204/----:latest
     container_name: work_log_app
     restart: always
     ports:

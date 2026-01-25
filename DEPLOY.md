@@ -73,3 +73,35 @@ git pull
 docker compose build --no-cache
 docker compose up -d
 ```
+
+## 自動化部署 (CI/CD)
+
+本專案已設定 GitHub Actions workflow (`.github/workflows/deploy.yml`)。
+
+### 設定步驟
+
+1.  **準備伺服器**: 確保伺服器已安裝 Docker, Docker Compose 與 Git。
+2.  **首次設定**:
+    在伺服器上建立目錄並 Clone 專案：
+    ```bash
+    mkdir -p ~/apps
+    cd ~/apps
+    git clone https://github.com/leeivan204/---- work-log-assistant
+    cd work-log-assistant
+    # 建立必要的資料夾
+    mkdir -p data/uploads
+    # 首次啟動 (確保環境變數設定正確)
+    docker compose up -d
+    ```
+3.  **設定 GitHub Secrets**:
+    在 GitHub Repo > Settings > Secrets and variables > Actions > New repository secret，新增以下變數：
+    
+    | Name | Value |
+    | :--- | :--- |
+    | `VPS_HOST` | 伺服器 IP (例如 `1.2.3.4`) |
+    | `VPS_USERNAME` | SSH 使用者 (例如 `root`) |
+    | `VPS_SSH_KEY` | SSH 私鑰內容 (建議使用專門的 Deploy Key) |
+    
+4.  **觸發部署**:
+    當您推送到 `main` 分支時，GitHub Actions 會自動建置 Image 並部署到伺服器。
+
