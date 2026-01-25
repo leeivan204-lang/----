@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Auth Demo</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="utils/auth.js"></script>
+    <script>
+        // Guard: Redirect if not logged in
+        if (!auth.checkAuth()) {
+            throw new Error('Redirecting to login'); // Stop execution
+        }
+    </script>
+    <link rel="icon" type="image/png" href="/favicon.png">
+</head>
+
+<body>
+    <div class="container dashboard-container">
+        <div class="card">
+            <nav class="nav-bar">
+                <h1 class="card-title">Dashboard</h1>
+                <div>
+                    <span id="userInfo" style="margin-right: 1rem; font-weight: 500;"></span>
+                    <button onclick="auth.logout()"
+                        style="width: auto; padding: 0.5rem 1rem; font-size: 0.875rem;">Logout</button>
+                </div>
+            </nav>
+
+            <div style="margin-bottom: 2rem;">
+                <h2 style="font-size: 1.25rem; margin-bottom: 1rem;">User Profile</h2>
+                <div id="profileData"
+                    style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem; font-family: monospace;">
+                    Loading...
+                </div>
+            </div>
+
+            <div style="margin-bottom: 2rem;">
+                <h2 style="font-size: 1.25rem; margin-bottom: 1rem;">Products (Authenticated)</h2>
+                <div id="productsList"
+                    style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));">
+                    Loading products...
+                </div>
+            </div>
+
+            <div id="adminLink" class="hidden"
+                style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+                <p style="margin-bottom: 0.5rem; color: var(--text-muted);">Admin privileges detected</p>
+                <a href="/admin.html">
+                    <button class="secondary">Go to Admin Panel</button>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="utils/debug-panel.js"></script>
+    <script>
+        async function loadDashboard() {
+            const user = auth.getUser();
+            document.getElementById('userInfo').textContent = user.username;
+
+            if (user.role === 'admin') {
+                document.getElementById('adminLink').classList.remove('hidden');
+            }
+
+            try {
+                const response = await auth.fetchProtected('/users/me');
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('profileData').innerHTML = `
+                        <strong>ID:</strong> ${data.username}<br>
+                        <strong>Role:</strong> ${data.role}<br>
+                        <strong>Email:</strong> ${data.email || 'N/A'}<br>
+                        <strong>Full Name:</strong> ${data.full_name || 'N/A'}<br>
+                        <strong>Disabled:</strong> ${data.disabled}
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load profile', error);
+                document.getElementById('profileData').textContent = 'Error loading profile data.';
+            }
+
+            // Load Products
+            try {
+                const response = await auth.fetchProtected('/api/products');
+                if (response.ok) {
+                    const data = await response.json();
+                    const productsHtml = data.products.map(p => `
+                        <div style="border:1px solid #e5e7eb; padding:10px; border-radius:6px; background:white;">
+                            <div style="font-weight:600">${p.name}</div>
+                            <div style="color:var(--text-muted)">$${p.price.toFixed(2)}</div>
+                        </div>
+                    `).join('');
+                    document.getElementById('productsList').innerHTML = productsHtml;
+                }
+            } catch (error) {
+                console.error('Failed to load products', error);
+                document.getElementById('productsList').innerHTML = `<span style="color:red">Error loading products: ${error.message}</span>`;
+            }
+        }
+
+        loadDashboard();
+    </script>
+</body>
+
+</html>
