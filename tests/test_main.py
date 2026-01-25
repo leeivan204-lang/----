@@ -14,33 +14,60 @@ os.makedirs("test_uploads", exist_ok=True)
 if os.path.exists("test_logs.db"):
     os.remove("test_logs.db")
     
-from main import app, init_db, UPLOAD_DIR, DB_PATH
+from main import app, init_db, UPLOAD_DIR, DB_PATH, get_current_user, User
 
-# 重新初始化 DB (因為 import 時可能已經跑過，但我們剛刪除了)
+# 重新初始化 DB
 init_db()
 
 client = TestClient(app)
+
+# Mock Auth
+def mock_get_current_user():
+    return User(username="test_user", role="admin")
+
+app.dependency_overrides[get_current_user] = mock_get_current_user
 
 @pytest.fixture(autouse=True)
 def run_around_tests():
     # Setup: 確保乾淨的 DB 與 Uploads
     if os.path.exists(DB_PATH):
-        os.remove(DB_PATH)
+        try:
+            os.remove(DB_PATH)
+        except PermissionError:
+            pass
     init_db()
+    
+    # Check if default workspace exists
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT count(*) FROM workspaces")
+    if c.fetchone()[0] == 0:
+        c.execute("INSERT INTO workspaces (id, name, sheet_tab_name, owner_id) VALUES (1, 'Default', 'Log', 'admin')")
+        conn.commit()
+    conn.close()
     
     # 確保測試上傳目錄存在並清空
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     for f in os.listdir(UPLOAD_DIR):
-        os.remove(os.path.join(UPLOAD_DIR, f))
+        try:
+            os.remove(os.path.join(UPLOAD_DIR, f))
+        except:
+            pass
             
     yield
     
     # Teardown
     if os.path.exists(DB_PATH):
-        os.remove(DB_PATH)
+        try:
+            os.remove(DB_PATH)
+        except:
+            pass
     if os.path.exists(UPLOAD_DIR):
         for f in os.listdir(UPLOAD_DIR):
-            os.remove(os.path.join(UPLOAD_DIR, f))
+            try:
+                os.remove(os.path.join(UPLOAD_DIR, f))
+            except:
+                pass
         try:
             os.rmdir(UPLOAD_DIR)
         except:
@@ -48,7 +75,7 @@ def run_around_tests():
 
 def test_get_logs_empty():
     """【API 邏輯】取得空紀錄列表"""
-    response = client.get("/api/logs")
+    response = client.get("/api/logs", params={"workspace_id": 1})
     assert response.status_code == 200
     assert response.json() == []
 
@@ -60,7 +87,8 @@ def test_create_log_success():
             "role": "Teacher",
             "date": "2024-01-20",
             "title": "教學研討",
-            "desc": "討論課程內容"
+            "desc": "討論課程內容",
+            "workspace_id": 1
         }
     )
     assert response.status_code == 200
@@ -75,9 +103,8 @@ def test_create_log_success():
     row = cursor.fetchone()
     conn.close()
     assert row is not None
-    assert row[3] == "教學研討" # title is 4th column (0-indexed: id, role, date, title)... wait 
-    # Schema: id, role, date, title, desc, link, notes, file_names, created_at
-    # Indices: 0, 1,    2,    3,     4,    5,    6,     7,          8
+    # 3:title
+    assert row[3] == "教學研討"
 
 def test_create_log_with_file():
     """【API 邏輯】新增含檔案紀錄"""
@@ -90,7 +117,8 @@ def test_create_log_with_file():
         data={
             "role": "Admin",
             "date": "2024-01-20",
-            "title": "會議記錄"
+            "title": "會議記錄",
+            "workspace_id": 1
         },
         files=files
     )
@@ -110,11 +138,12 @@ def test_get_logs_verification():
         data={
             "role": "Teacher",
             "date": "2024-01-20",
-            "title": "Check List"
+            "title": "Check List",
+            "workspace_id": 1
         }
     )
     
-    response = client.get("/api/logs")
+    response = client.get("/api/logs", params={"workspace_id": 1})
     assert response.status_code == 200
     logs = response.json()
     assert len(logs) == 1
@@ -127,7 +156,7 @@ def test_download_file():
     filename = "download_test.txt"
     upload_res = client.post(
         "/api/logs",
-        data={"role": "User", "date": "2024-01-20", "title": "For Download"},
+        data={"role": "User", "date": "2024-01-20", "title": "For Download", "workspace_id": 1},
         files={"files": (filename, file_content, "text/plain")}
     )
     saved_filename = upload_res.json()["file_names"]
@@ -150,7 +179,7 @@ def test_delete_log():
     filename = "delete_test.txt"
     upload_res = client.post(
         "/api/logs",
-        data={"role": "User", "date": "2024-01-20", "title": "For Deletion"},
+        data={"role": "User", "date": "2024-01-20", "title": "For Deletion", "workspace_id": 1},
         files={"files": (filename, file_content, "text/plain")}
     )
     log_id = upload_res.json()["id"]
